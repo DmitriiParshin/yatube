@@ -61,7 +61,13 @@ class PostUrlTests(TestCase):
             ('posts:post_edit', (cls.post.id,),
              f'/posts/{cls.post.id}/edit/'),
             ('posts:add_comment', (cls.post.id,),
-             f'/posts/{cls.post.id}/comment/')
+             f'/posts/{cls.post.id}/comment/'),
+            ('posts:follow_index', None, '/follow/'),
+            ('posts:profile_follow', (cls.post.author,),
+             f'/profile/{cls.post.author}/follow/'),
+            ('posts:profile_unfollow', (cls.post.author,),
+             f'/profile/{cls.post.author}/unfollow/'),
+
         )
 
     @classmethod
@@ -90,11 +96,6 @@ class PostUrlTests(TestCase):
                 response = self.authorized_author.get(reverse(name, args=args))
                 self.assertTemplateUsed(response, template)
 
-    def test_page_404(self):
-        response = self.client.get('/qwerty12345/')
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-        self.assertTemplateUsed(response, 'core/404.html')
-
     def test_urls_uses_correct_reverse_names(self):
         for name, args, url in self.revers_names_urls_names:
             with self.subTest(name=name):
@@ -106,7 +107,10 @@ class PostUrlTests(TestCase):
                 response = self.client.get(url, follow=True)
                 if name in ['posts:post_create',
                             'posts:post_edit',
-                            'posts:add_comment'
+                            'posts:add_comment',
+                            'posts:follow_index',
+                            'posts:profile_follow',
+                            'posts:profile_unfollow'
                             ]:
                     reverse_on_login = reverse('users:login') + '?next=' + url
                     self.assertRedirects(response, reverse_on_login)
@@ -144,3 +148,8 @@ class PostUrlTests(TestCase):
                 self.assertEqual(response.context['post'].image,
                                  self.post.image
                                  )
+
+    def test_page_404(self):
+        response = self.client.get('/nonexist-page/')
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.assertTemplateUsed(response, 'core/404.html')
