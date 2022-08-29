@@ -40,9 +40,11 @@ class Post(CreatedModel):
 
 
 class Group(models.Model):
-    title = models.CharField('Название группы', max_length=200, help_text='Введите название группы')
+    title = models.CharField('Название группы', max_length=200,
+                             help_text='Введите название группы')
     slug = models.SlugField('Слаг группы', unique=True)
-    description = models.TextField('Описание группы', help_text='Введите описание группы')
+    description = models.TextField('Описание группы',
+                                   help_text='Введите описание группы')
 
     class Meta:
         verbose_name = 'Группа'
@@ -65,7 +67,8 @@ class Comment(CreatedModel):
         on_delete=models.CASCADE,
         related_name='comments',
     )
-    text = models.TextField('Текст комментария', help_text='Введите текст комментария')
+    text = models.TextField('Текст комментария',
+                            help_text='Введите текст комментария')
 
     class Meta:
         verbose_name = 'Комментарий'
