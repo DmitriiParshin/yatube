@@ -56,9 +56,10 @@ class PostViewsTests(TestCase):
         self.fields = (
             (post.text, self.post.text),
             (post.author, self.user),
-            (post.created, self.post.created),
+            (post.pub_date, self.post.pub_date),
             (post.group, self.post.group),
             (post.comments, self.post.comments),
+            (post.image, self.post.image)
         )
         for field, correct_field in self.fields:
             with self.subTest(field=field):
@@ -138,13 +139,13 @@ class PostViewsTests(TestCase):
         self.assertContains(response, self.comments.text)
 
     def test_index_cache(self):
-        self.new_post = Post.objects.create(
+        new_post = Post.objects.create(
             text='text_test_post_cache',
             author=self.user
         )
         response = self.authorized_client.get(reverse('posts:index'))
         self.correct_context(response)
-        Post.objects.filter(id=self.new_post.id).delete()
+        new_post.delete()
         response_cache = self.authorized_client.get(reverse('posts:index'))
         self.assertEqual(response.content, response_cache.content)
         cache.clear()
@@ -174,8 +175,7 @@ class PaginatorViewsTest(TestCase):
         cls.post = Post.objects.bulk_create(pages)
 
     def setUp(self):
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        pass
 
     def test_paginator(self):
         urls = (

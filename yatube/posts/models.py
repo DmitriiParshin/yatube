@@ -11,8 +11,7 @@ class Post(CreatedModel):
     author = models.ForeignKey(
         User,
         verbose_name='Автор поста',
-        on_delete=models.CASCADE,
-        related_name='posts',
+        on_delete=models.CASCADE
     )
     group = models.ForeignKey(
         'Group',
@@ -20,7 +19,6 @@ class Post(CreatedModel):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        related_name='posts',
         help_text='Выберете группу для поста'
     )
     image = models.ImageField(
@@ -30,10 +28,10 @@ class Post(CreatedModel):
         help_text='Выберете изображение для этого поста'
     )
 
-    class Meta:
-        ordering = ('created',)
+    class Meta(CreatedModel.Meta):
         verbose_name = 'Пост'
         verbose_name_plural = 'Посты'
+        default_related_name = 'posts'
 
     def __str__(self):
         return self.text[:15]
@@ -58,21 +56,20 @@ class Comment(CreatedModel):
     post = models.ForeignKey(
         Post,
         verbose_name='Комментарий к посту',
-        on_delete=models.CASCADE,
-        related_name='comments',
+        on_delete=models.CASCADE
     )
     author = models.ForeignKey(
         User,
         verbose_name='Автор комментария',
-        on_delete=models.CASCADE,
-        related_name='comments',
+        on_delete=models.CASCADE
     )
     text = models.TextField('Текст комментария',
                             help_text='Введите текст комментария')
 
-    class Meta:
+    class Meta(CreatedModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
+        default_related_name = 'comments'
 
     def __str__(self):
         return self.text
@@ -83,11 +80,18 @@ class Follow(models.Model):
         User,
         verbose_name='Подписчик',
         on_delete=models.CASCADE,
-        related_name='follower',
+        related_name='follower'
     )
     author = models.ForeignKey(
         User,
-        verbose_name='Автор, на которого подписались',
+        verbose_name='Автор, на которого подписан',
         on_delete=models.CASCADE,
-        related_name='following',
+        related_name='following'
     )
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return f'{self.user} подписан на {self.author}'
