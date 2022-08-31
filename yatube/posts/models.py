@@ -3,15 +3,14 @@ from django.db import models
 
 from core.models import CreatedModel
 
+
 User = get_user_model()
 
 
 class Post(CreatedModel):
-    text = models.TextField('Текст поста', help_text='Введите текст поста')
-    author = models.ForeignKey(
-        User,
-        verbose_name='Автор поста',
-        on_delete=models.CASCADE
+    text = models.TextField(
+        'Текст поста',
+        help_text='Введите текст поста'
     )
     group = models.ForeignKey(
         'Group',
@@ -25,7 +24,7 @@ class Post(CreatedModel):
         'Изображение',
         upload_to='posts/',
         blank=True,
-        help_text='Выберете изображение для этого поста'
+        help_text='Выберете изображение для поста'
     )
 
     class Meta(CreatedModel.Meta):
@@ -38,11 +37,19 @@ class Post(CreatedModel):
 
 
 class Group(models.Model):
-    title = models.CharField('Название группы', max_length=200,
-                             help_text='Введите название группы')
-    slug = models.SlugField('Слаг группы', unique=True)
-    description = models.TextField('Описание группы',
-                                   help_text='Введите описание группы')
+    title = models.CharField(
+        'Название группы',
+        max_length=200,
+        help_text='Введите название группы'
+    )
+    slug = models.SlugField(
+        'Слаг группы',
+        unique=True
+    )
+    description = models.TextField(
+        'Описание группы',
+        help_text='Введите описание группы'
+    )
 
     class Meta:
         verbose_name = 'Группа'
@@ -58,13 +65,10 @@ class Comment(CreatedModel):
         verbose_name='Комментарий к посту',
         on_delete=models.CASCADE
     )
-    author = models.ForeignKey(
-        User,
-        verbose_name='Автор комментария',
-        on_delete=models.CASCADE
+    text = models.TextField(
+        'Текст комментария',
+        help_text='Введите комментарий'
     )
-    text = models.TextField('Текст комментария',
-                            help_text='Введите текст комментария')
 
     class Meta(CreatedModel.Meta):
         verbose_name = 'Комментарий'

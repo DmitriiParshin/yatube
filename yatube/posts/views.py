@@ -33,13 +33,10 @@ def profile(request, username):
     posts_count = posts.count()
     follower_count = author.follower.count()
     following_count = author.following.count()
-    if request.user.is_authenticated:
-        following = Follow.objects.filter(
-            user=request.user.id,
-            author=author.id
-        ).exists()
-    else:
-        following = False
+    following = Follow.objects.filter(
+        user=request.user.id,
+        author=author.id
+    ).exists() and request.user.is_authenticated
     context = {
         'author': author,
         'posts_count': posts_count,
@@ -54,9 +51,12 @@ def profile(request, username):
 def post_detail(request, post_id):
     form = CommentForm()
     post = get_object_or_404(Post, id=post_id)
+    author_comment = Post.objects.prefetch_related('comments__author=author')
     context = {
         'form': form,
         'post': post,
+        'author': post.author,
+        'author_comment': author_comment,
         'comments': post.comments.all()
     }
     return render(request, 'posts/post_detail.html', context)
@@ -102,7 +102,12 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    posts = Post.objects.select_related(author__following__user=request.user)
+    posts = Post.objects.filter(
+        author__following__user=request.user
+    )
+    '''posts = Post.objects.prefetch_related(
+        'author__following__user=request.user'
+    )'''
     context = {
         'page_obj': get_page_obj(request, posts),
     }
