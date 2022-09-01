@@ -1,15 +1,17 @@
 import shutil
 import tempfile
 
+from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from django import forms
-from django.core.cache import cache
 
 from posts.forms import PostForm
-from posts.models import Comment, Group, Post
+from posts.models import Comment, Follow, Group, Post
+
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -21,16 +23,32 @@ class PostViewsTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.test_image = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        cls.image = SimpleUploadedFile(
+            name='test_image.gif',
+            content=cls.test_image,
+            content_type='image/gif'
+        )
         cls.user = User.objects.create_user(username='test_user')
+        cls.new_user = User.objects.create_user(username='test_user_2')
         cls.group = Group.objects.create(
             title='Название тестовой группы',
             slug='test_slug',
             description='Описание тестовой группы',
         )
         cls.post = Post.objects.create(
+            # author=User.objects.create_user(username='test_author'),
             author=cls.user,
             text='Текст тестового поста',
             group=cls.group,
+            image=cls.image
         )
         cls.comments = Comment.objects.create(
             post=cls.post,
@@ -38,15 +56,17 @@ class PostViewsTests(TestCase):
             text='Тестовый комментарий'
         )
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
     def setUp(self):
         cache.clear()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.authorized_client_2 = Client()
+        self.authorized_client_2.force_login(self.new_user)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def correct_context(self, response, check=False):
         if check:
@@ -66,7 +86,7 @@ class PostViewsTests(TestCase):
                 self.assertEqual(field, correct_field)
 
     def test_index_page_show_correct_context(self):
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.client.get(reverse('posts:index'))
         self.correct_context(response)
 
     def test_group_list_page_show_correct_context(self):
@@ -139,22 +159,49 @@ class PostViewsTests(TestCase):
         self.assertContains(response, self.comments.text)
 
     def test_index_cache(self):
-        new_post = Post.objects.create(
-            text='text_test_post_cache',
-            author=self.user
+        post = Post.objects.create(
+            text='Текст поста для теста кэша',
+            author=self.user,
+            group=self.group
         )
         response = self.authorized_client.get(reverse('posts:index'))
-        self.correct_context(response)
-        new_post.delete()
+        post.delete()
         response_cache = self.authorized_client.get(reverse('posts:index'))
-        self.assertEqual(response.content, response_cache.content)
         cache.clear()
         response_cache_clear = self.authorized_client.get(
             reverse('posts:index'))
+        self.assertEqual(response.content, response_cache.content)
         self.assertNotEqual(response_cache.content,
                             response_cache_clear.content)
 
+    def test_follow_unfollow_page_on_once(self):
+        following_count = self.user.following.count()
+        follower_count = self.new_user.follower.count()
+        self.authorized_client_2.get(reverse('posts:profile_follow',
+                                             args=(self.user.username,))
+                                     )
+        self.assertEqual(self.user.following.count(), following_count + 1)
+        self.assertEqual(self.new_user.follower.count(), follower_count + 1)
+        self.authorized_client_2.get(reverse('posts:profile_follow',
+                                             args=(self.user.username,))
+                                     )
+        self.assertEqual(self.user.following.count(), following_count + 1)
+        self.assertEqual(self.new_user.follower.count(), follower_count + 1)
+        following_count = self.user.following.count()
+        follower_count = self.new_user.follower.count()
+        self.authorized_client_2.get(reverse('posts:profile_unfollow',
+                                             args=(self.user.username,))
+                                     )
+        self.assertEqual(self.user.following.count(), following_count - 1)
+        self.assertEqual(self.new_user.follower.count(), follower_count - 1)
+        self.authorized_client_2.get(reverse('posts:profile_unfollow',
+                                             args=(self.user.username,))
+                                     )
+        self.assertEqual(self.user.following.count(), following_count - 1)
+        self.assertEqual(self.new_user.follower.count(), follower_count - 1)
 
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PaginatorViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -175,7 +222,12 @@ class PaginatorViewsTest(TestCase):
         cls.post = Post.objects.bulk_create(pages)
 
     def setUp(self):
-        pass
+        cache.clear()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_paginator(self):
         urls = (

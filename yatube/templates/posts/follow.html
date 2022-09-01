@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load cache %}
-{% cache 20 page_obj.number %}
 {% block title %}Подписки{% endblock %}
 {% block content %}
-  <div class="container py-5">
-    {% include 'posts/includes/switcher.html' %}
-    {% for post in page_obj %}
-        {% include 'posts/includes/post_card.html' %}
-    {% endfor %}
-    {% include 'posts/includes/paginator.html' %}
-  </div>
+    {% cache 20 index_page page_obj.number %}
+      <div class="container py-5">
+        {% include 'posts/includes/switcher.html' with follow=True %}
+        {% for post in page_obj %}
+            {% include 'posts/includes/post_card.html' %}
+        {% endfor %}
+        {% include 'posts/includes/paginator.html' %}
+      </div>
+    {% endcache %}
 {% endblock %}
-{% endcache %}

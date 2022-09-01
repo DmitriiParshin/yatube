@@ -6,7 +6,6 @@ from http import HTTPStatus
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -23,19 +22,6 @@ class PostUrlTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
-        cls.image = SimpleUploadedFile(
-            name='small.gif',
-            content=cls.small_gif,
-            content_type='image/gif'
-        )
         cls.user = User.objects.create_user(username='test_user')
         cls.group = Group.objects.create(
             title='Название тестовой группы',
@@ -46,7 +32,6 @@ class PostUrlTests(TestCase):
             author=User.objects.create_user(username='test_author'),
             text='Текст тестового поста',
             group=cls.group,
-            image=cls.image,
         )
 
         cls.revers_names_urls = (
@@ -69,17 +54,17 @@ class PostUrlTests(TestCase):
              f'/profile/{cls.post.author}/unfollow/'),
         )
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
     def setUp(self):
         cache.clear()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         self.authorized_author = Client()
         self.authorized_author.force_login(self.post.author)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_revers_names_templates(self):
         self.revers_names_templates = (
@@ -118,10 +103,10 @@ class PostUrlTests(TestCase):
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_urls_for_authorized_client(self):
-        for name, args, url in self.revers_names_urls_names:
+        for name, args, url in self.revers_names_urls:
             with self.subTest(name=name):
                 response = self.authorized_client.get(url, follow=True)
-                if name in ['posts:post_edit']:
+                if name == 'posts:post_edit':
                     self.assertRedirects(
                         response,
                         reverse('posts:post_detail', args=args)
@@ -129,25 +114,21 @@ class PostUrlTests(TestCase):
                 else:
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    '''def test_urls_for_authorized_author(self):
-        for name, args, url in self.revers_names_urls_names:
+    def test_urls_for_authorized_author(self):
+        for name, args, url in self.revers_names_urls:
             with self.subTest(name=name):
                 response = self.authorized_author.get(url, follow=True)
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_post_with_image(self):
-        urls = (
-            ('posts:index', None),
-            ('posts:group_list', (self.group.slug,),),
-            ('posts:profile', (self.post.author,),),
-            ('posts:post_detail', (self.post.id,),),
-        )
-        for url, args in urls:
-            with self.subTest(url=url):
-                response = self.authorized_author.get(reverse(url, args=args))
-                self.assertEqual(response.context['post'].image,
-                                 self.post.image
-                                 )'''
+                if name == 'posts:profile_follow':
+                    self.assertRedirects(
+                        response,
+                        reverse('posts:profile', args=args)
+                    )
+                elif name == 'posts:profile_unfollow':
+                    self.assertEqual(response.status_code,
+                                     HTTPStatus.NOT_FOUND
+                                     )
+                else:
+                    self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_page_404(self):
         response = self.client.get('/nonexist-page/')

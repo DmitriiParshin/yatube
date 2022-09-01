@@ -9,7 +9,7 @@
         <h3>Всего постов: {{ posts_count }}</h3>
         <h5>Всего подписчиков: {{ following_count }}</h5>
         <h5>Всего подписок: {{ follower_count }}</h5>
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and user != author %}
           {% if following %}
             <a
               class="btn btn-lg btn-light"

@@ -50,13 +50,14 @@ def profile(request, username):
 
 def post_detail(request, post_id):
     form = CommentForm()
-    post = get_object_or_404(Post, id=post_id)
-    author_comment = Post.objects.prefetch_related('comments__author=author')
+    post = get_object_or_404(
+        Post.objects.prefetch_related('comments__author'),
+        id=post_id
+    )
     context = {
         'form': form,
         'post': post,
         'author': post.author,
-        'author_comment': author_comment,
         'comments': post.comments.all()
     }
     return render(request, 'posts/post_detail.html', context)
@@ -64,13 +65,13 @@ def post_detail(request, post_id):
 
 @login_required
 def post_create(request):
-    form = PostForm(request.POST or None, files=request.FILES or None, )
+    form = PostForm(request.POST or None, files=request.FILES or None)
     if not form.is_valid():
         return render(request, 'posts/create_post.html', {'form': form})
     post = form.save(commit=False)
     post.author = request.user
     post.save()
-    return redirect('posts:profile', username=request.user.username)
+    return redirect('posts:profile', username=request.user)
 
 
 @login_required
