@@ -38,13 +38,13 @@ class PostViewsTests(TestCase):
         )
         cls.user = User.objects.create_user(username='test_user')
         cls.new_user = User.objects.create_user(username='test_user_2')
+        cls.new_user_2 = User.objects.create_user(username='test_user_3')
         cls.group = Group.objects.create(
             title='Название тестовой группы',
             slug='test_slug',
             description='Описание тестовой группы',
         )
         cls.post = Post.objects.create(
-            # author=User.objects.create_user(username='test_author'),
             author=cls.user,
             text='Текст тестового поста',
             group=cls.group,
@@ -62,6 +62,8 @@ class PostViewsTests(TestCase):
         self.authorized_client.force_login(self.user)
         self.authorized_client_2 = Client()
         self.authorized_client_2.force_login(self.new_user)
+        self.authorized_client_3 = Client()
+        self.authorized_client_3.force_login(self.new_user_2)
 
     @classmethod
     def tearDownClass(cls):
@@ -200,6 +202,15 @@ class PostViewsTests(TestCase):
         self.assertEqual(self.user.following.count(), following_count - 1)
         self.assertEqual(self.new_user.follower.count(), follower_count - 1)
 
+    def test_post_show_follow_index(self):
+        self.authorized_client_2.get(reverse('posts:profile_follow',
+                                             args=(self.user.username,))
+                                     )
+        response = self.authorized_client_2.get(reverse('posts:follow_index'))
+        self.assertContains(response, self.post.text)
+        response = self.authorized_client_3.get(reverse('posts:follow_index'))
+        self.assertContains(response, self.post.text)
+
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PaginatorViewsTest(TestCase):
@@ -207,6 +218,7 @@ class PaginatorViewsTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username='test_user')
+        cls.follow_user = User.objects.create_user(username='follow_user')
         cls.group = Group.objects.create(
             title='title_group',
             slug='test_slug',
@@ -223,6 +235,11 @@ class PaginatorViewsTest(TestCase):
 
     def setUp(self):
         cache.clear()
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.follow_user)
+        self.authorized_client.get(reverse('posts:profile_follow',
+                                           args=(self.user.username,))
+                                   )
 
     @classmethod
     def tearDownClass(cls):
@@ -234,6 +251,7 @@ class PaginatorViewsTest(TestCase):
             ('posts:index', None),
             ('posts:group_list', (self.group.slug,)),
             ('posts:profile', (self.user.username,)),
+            ('posts:follow_index', None),
         )
         pages = (
             ('?page=1', settings.LIMIT),
@@ -243,7 +261,7 @@ class PaginatorViewsTest(TestCase):
             with self.subTest():
                 for page, amount in pages:
                     with self.subTest():
-                        response = self.client.get(reverse(name, args=args)
-                                                   + page)
+                        response = self.authorized_client.get(
+                            reverse(name, args=args) + page)
                         self.assertEqual(len(response.context['page_obj']),
                                          amount)
