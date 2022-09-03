@@ -59,6 +59,7 @@ class PostCreateFormTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_create_anonymous(self):
+        """Проверка создания поста неавторизованным пользователем."""
         form_data = {
             'text': self.post.text,
             'group': self.group.id,
@@ -74,6 +75,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(Post.objects.count(), posts_count)
 
     def test_create_post(self):
+        """Проверка создания поста."""
         self.post.delete()
         post_count = Post.objects.count()
         form_data = {
@@ -98,6 +100,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post.image, 'posts/test_image.gif')
 
     def test_edit_post(self):
+        """Проверка редактирования поста."""
         post_count = Post.objects.count()
         self.assertEqual(post_count, 1)
         new_group = Group.objects.create(
@@ -135,6 +138,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post_count, Post.objects.count())
 
     def test_create_comment_anonymous(self):
+        """Проверка создания комментария неавторизованным пользователем."""
         comment_count = Comment.objects.count()
         form_data = {
             'text': 'Тестовый комментарий'
@@ -144,12 +148,15 @@ class PostCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        reverse_on_login = (reverse('users:login')
-                            + f'?next=/posts/{self.post.id}/comment/')
+        reverse_on_login = (
+            reverse('users:login') + '?next='
+            + reverse('posts:add_comment', args=(self.post.id,))
+        )
         self.assertRedirects(response, reverse_on_login)
         self.assertEqual(Comment.objects.count(), comment_count)
 
     def test_create_comment(self):
+        """Проверка создания комментария."""
         comment_count = Comment.objects.count()
         form_data = {
             'text': 'Тестовый комментарий'

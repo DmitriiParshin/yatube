@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-
 from core.models import CreatedModel
 
 
@@ -8,10 +7,6 @@ User = get_user_model()
 
 
 class Post(CreatedModel):
-    text = models.TextField(
-        'Текст поста',
-        help_text='Введите текст поста'
-    )
     group = models.ForeignKey(
         'Group',
         verbose_name='Группа поста',
@@ -31,9 +26,6 @@ class Post(CreatedModel):
         verbose_name = 'Пост'
         verbose_name_plural = 'Посты'
         default_related_name = 'posts'
-
-    def __str__(self):
-        return self.text[:15]
 
 
 class Group(models.Model):
@@ -65,18 +57,11 @@ class Comment(CreatedModel):
         verbose_name='Комментарий к посту',
         on_delete=models.CASCADE
     )
-    text = models.TextField(
-        'Текст комментария',
-        help_text='Введите комментарий'
-    )
 
     class Meta(CreatedModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
         default_related_name = 'comments'
-
-    def __str__(self):
-        return self.text
 
 
 class Follow(models.Model):
@@ -97,8 +82,14 @@ class Follow(models.Model):
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         constraints = [
-            models.UniqueConstraint(fields=['user', 'author'],
-                                    name='already_following')
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='already_following'
+            ),
+            models.CheckConstraint(
+                check=~models.Q(user=models.F('author')),
+                name="check_follow",
+            ),
         ]
 
     def __str__(self):

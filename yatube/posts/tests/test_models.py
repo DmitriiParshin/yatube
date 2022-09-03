@@ -24,6 +24,7 @@ class PostModelTest(TestCase):
         )
 
     def test_models_have_correct_object_names(self):
+        """Проверка object_names в посте."""
         post = PostModelTest.post
         self.assertEqual(post.text[:15], str(post))
         group = PostModelTest.group
@@ -37,6 +38,7 @@ class PostModelTest(TestCase):
                 self.assertEqual(expected_value, field)
 
     def test_verbose_name_post(self):
+        """Проверка verbose_name в посте."""
         post = PostModelTest.post
         field_verboses = {
             'text': 'Текст поста',
@@ -51,6 +53,7 @@ class PostModelTest(TestCase):
                     expected_value)
 
     def test_verbose_name_group(self):
+        """Проверка verbose_name в группе."""
         group = PostModelTest.group
         field_verboses = {
             'title': 'Название группы',
@@ -64,7 +67,7 @@ class PostModelTest(TestCase):
                     expected_value)
 
     def test_help_text_post(self):
-        """help_text в полях совпадает с ожидаемым."""
+        """Проверка help_text в посте."""
         post = PostModelTest.post
         field_help_texts = {
             'text': 'Введите текст поста',

@@ -67,6 +67,7 @@ class PostUrlTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_revers_names_templates(self):
+        """Проверяем reverse-ы на корректные шаблоны."""
         self.revers_names_templates = (
             ('posts:index', None, 'posts/index.html'),
             ('posts:group_list', (self.group.slug,), 'posts/group_list.html'),
@@ -82,11 +83,14 @@ class PostUrlTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_urls_uses_correct_reverse_names(self):
+        """Проверяем url-ы на корректные reverse-ы."""
         for name, args, url, in self.revers_names_urls:
             with self.subTest(name=name):
                 self.assertEqual(reverse(name, args=args), url)
 
     def test_urls_for_anonymous(self):
+        """Проверяем доступность всех url-ов неавторизованному пользователю и
+        redirect-ы на страницу авторизации."""
         for name, args, url in self.revers_names_urls:
             with self.subTest(name=name):
                 response = self.client.get(url, follow=True)
@@ -103,22 +107,37 @@ class PostUrlTests(TestCase):
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_urls_for_authorized_client(self):
+        """Проверяем доступность всех url-ов авторизованному пользователю и
+                redirect-ы."""
         for name, args, url in self.revers_names_urls:
             with self.subTest(name=name):
                 response = self.authorized_client.get(url, follow=True)
-                if name == 'posts:post_edit':
+                if name in ['posts:post_edit', 'posts:add_comment']:
                     self.assertRedirects(
                         response,
                         reverse('posts:post_detail', args=args)
+                    )
+                elif name in ['posts:profile_follow',
+                              'posts:profile_unfollow']:
+                    self.assertRedirects(
+                        response,
+                        reverse('posts:profile', args=args)
                     )
                 else:
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_urls_for_authorized_author(self):
+        """Проверяем доступность всех url-ов авторизованному автору и
+                        redirect-ы."""
         for name, args, url in self.revers_names_urls:
             with self.subTest(name=name):
                 response = self.authorized_author.get(url, follow=True)
-                if name == 'posts:profile_follow':
+                if name == 'posts:add_comment':
+                    self.assertRedirects(
+                        response,
+                        reverse('posts:post_detail', args=args)
+                    )
+                elif name == 'posts:profile_follow':
                     self.assertRedirects(
                         response,
                         reverse('posts:profile', args=args)
@@ -131,6 +150,7 @@ class PostUrlTests(TestCase):
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_page_404(self):
+        """Проверяем доступность кастомной странмцы с ошибкой 404."""
         response = self.client.get('/nonexist-page/')
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         self.assertTemplateUsed(response, 'core/404.html')

@@ -31,17 +31,11 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('group').all()
     posts_count = posts.count()
-    follower_count = author.follower.count()
-    following_count = author.following.count()
-    following = Follow.objects.filter(
-        user=request.user.id,
-        author=author.id
-    ).exists() and request.user.is_authenticated
+    following = author.following.filter(
+        user=request.user).exists()
     context = {
         'author': author,
         'posts_count': posts_count,
-        'follower_count': follower_count,
-        'following_count': following_count,
         'page_obj': get_page_obj(request, posts),
         'following': following,
     }
@@ -103,12 +97,8 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    posts = Post.objects.filter(
-        author__following__user=request.user
-    )
-    '''posts = Post.objects.prefetch_related(
-        'author__following__user=request.user'
-    )'''
+    posts = Post.objects.filter(author__following__user=request.user)
+    posts = posts.select_related('author', 'group').all()
     context = {
         'page_obj': get_page_obj(request, posts),
     }
@@ -128,5 +118,6 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    get_object_or_404(Follow, author__username=username).delete()
+    get_object_or_404(Follow, author__username=username,
+                      user=request.user).delete()
     return redirect('posts:profile', username=author)

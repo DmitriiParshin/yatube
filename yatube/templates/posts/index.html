@@ -2,7 +2,7 @@
 {% load cache %}
 {% block title %}Последние обновления на сайте{% endblock %}
 {% block content %}
-    {% cache 20 index_page page_obj.number %}
+    {% cache 1 index_page page_obj.number %}
       <div class="container py-5">
         {% include 'posts/includes/switcher.html' with index=True %}
         {% for post in page_obj %}

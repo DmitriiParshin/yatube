@@ -36,7 +36,7 @@ class PostViewsTests(TestCase):
             content=cls.test_image,
             content_type='image/gif'
         )
-        cls.user = User.objects.create_user(username='test_user')
+        cls.user = User.objects.create_user(username='test_author')
         cls.new_user = User.objects.create_user(username='test_user_2')
         cls.new_user_2 = User.objects.create_user(username='test_user_3')
         cls.group = Group.objects.create(
@@ -64,6 +64,9 @@ class PostViewsTests(TestCase):
         self.authorized_client_2.force_login(self.new_user)
         self.authorized_client_3 = Client()
         self.authorized_client_3.force_login(self.new_user_2)
+        self.authorized_client_3.get(reverse('posts:profile_follow',
+                                             args=(self.user.username,))
+                                     )
 
     @classmethod
     def tearDownClass(cls):
@@ -88,10 +91,12 @@ class PostViewsTests(TestCase):
                 self.assertEqual(field, correct_field)
 
     def test_index_page_show_correct_context(self):
+        """Проверка context-а на главной странице."""
         response = self.client.get(reverse('posts:index'))
         self.correct_context(response)
 
     def test_group_list_page_show_correct_context(self):
+        """Проверка context-а на странице группы"""
         response = self.authorized_client.get(reverse(
             'posts:group_list', args=(self.group.slug,)))
         self.correct_context(response)
@@ -106,6 +111,7 @@ class PostViewsTests(TestCase):
                 self.assertEqual(first_object, value)
 
     def test_group_list_another_group(self):
+        """Проверка context-а при смене группы."""
         new_post = self.post
         new_group = Group.objects.create(
             title='name new group',
@@ -122,6 +128,7 @@ class PostViewsTests(TestCase):
                          self.post.text)
 
     def test_profile_page_show_correct_context(self):
+        """Проверка context-а на странице профиля."""
         response = self.authorized_client.get(reverse(
             'posts:profile', args=(self.user.username,)))
         self.correct_context(response)
@@ -129,11 +136,13 @@ class PostViewsTests(TestCase):
                          self.user)
 
     def test_post_detail_page_show_correct_context(self):
+        """Проверка context-а на странице поста"""
         response = self.authorized_client.get(reverse(
             'posts:post_detail', args=(self.post.id,)))
         self.correct_context(response, True)
 
     def test_post_create_page_show_correct_context(self):
+        """Проверка context-а при создании поста."""
         form_fields = (
             ('text', forms.fields.CharField),
             ('group', forms.fields.ChoiceField),
@@ -155,12 +164,14 @@ class PostViewsTests(TestCase):
                         self.assertIsInstance(form_field, expected)
 
     def test_comment_show_in_post_detail(self):
+        """Проверка отображения комментариев на странице поста."""
         response = self.client.get(
             reverse('posts:post_detail', args=(self.post.id,))
         )
         self.assertContains(response, self.comments.text)
 
     def test_index_cache(self):
+        """Проверка cache-а на главной странице."""
         post = Post.objects.create(
             text='Текст поста для теста кэша',
             author=self.user,
@@ -176,40 +187,30 @@ class PostViewsTests(TestCase):
         self.assertNotEqual(response_cache.content,
                             response_cache_clear.content)
 
-    def test_follow_unfollow_page_on_once(self):
+    def test_follow_page(self):
         following_count = self.user.following.count()
-        follower_count = self.new_user.follower.count()
         self.authorized_client_2.get(reverse('posts:profile_follow',
                                              args=(self.user.username,))
                                      )
+        self.assertEqual(self.post.author.username, 'test_author')
+        self.assertEqual(self.new_user.username, 'test_user_2')
         self.assertEqual(self.user.following.count(), following_count + 1)
-        self.assertEqual(self.new_user.follower.count(), follower_count + 1)
-        self.authorized_client_2.get(reverse('posts:profile_follow',
+
+    def test_unfollow_page(self):
+        unfollowing_count = self.user.following.count()
+        self.authorized_client_3.get(reverse('posts:profile_unfollow',
                                              args=(self.user.username,))
                                      )
-        self.assertEqual(self.user.following.count(), following_count + 1)
-        self.assertEqual(self.new_user.follower.count(), follower_count + 1)
-        following_count = self.user.following.count()
-        follower_count = self.new_user.follower.count()
-        self.authorized_client_2.get(reverse('posts:profile_unfollow',
-                                             args=(self.user.username,))
-                                     )
-        self.assertEqual(self.user.following.count(), following_count - 1)
-        self.assertEqual(self.new_user.follower.count(), follower_count - 1)
-        self.authorized_client_2.get(reverse('posts:profile_unfollow',
-                                             args=(self.user.username,))
-                                     )
-        self.assertEqual(self.user.following.count(), following_count - 1)
-        self.assertEqual(self.new_user.follower.count(), follower_count - 1)
+        self.assertEqual(self.user.following.count(), unfollowing_count - 1)
 
     def test_post_show_follow_index(self):
-        self.authorized_client_2.get(reverse('posts:profile_follow',
-                                             args=(self.user.username,))
-                                     )
         response = self.authorized_client_2.get(reverse('posts:follow_index'))
-        self.assertContains(response, self.post.text)
-        response = self.authorized_client_3.get(reverse('posts:follow_index'))
-        self.assertContains(response, self.post.text)
+        self.assertEqual(len(response.context.get('page_obj')), 0)
+        self.authorized_client_2.get(
+            reverse('posts:profile_follow', args=(self.user.username,))
+        )
+        response = self.authorized_client_2.get(reverse('posts:follow_index'))
+        self.assertEqual(len(response.context.get('page_obj')), 1)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
