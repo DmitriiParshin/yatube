@@ -6,15 +6,17 @@
       </li>
       <li>
         Автор:
-        {% if author %}
+        {% if post.author.get_full_name %}
           {{ post.author.get_full_name }}
         {% else %}
-           <a href="{% url 'posts:profile' post.author %}">
-              {% if post.author.get_full_name %}
-                  {{ post.author.get_full_name }}
-              {% else %}
-                  {{ post.author }}
-              {% endif %}</a>
+          {{ post.author }}
+        {% endif %}
+      </li>
+      <li>
+        {% if post.group %}
+          Пост группы: {{ post.group.title }}
+        {% else %}
+          <span style='color: red'>Этой публикации нет ни в одном сообществе.</span>
         {% endif %}
       </li>
     </ul>
@@ -22,14 +24,10 @@
         <img class="card-img my-2" src="{{ im.url }}">
     {% endthumbnail %}
     <p>{{ post.text|linebreaks }}</p>
-    <a href="{% url 'posts:post_detail' post.id %}">Читать пост</a><br>
-    {% if not group %}
-        {% if post.group %}
-        <a href="{% url 'posts:group_list' post.group.slug %}">Посты группы: {{ post.group.title }}</a>
-        {% else %}
-          <span style='color: red'>Этой публикации нет ни в одном сообществе.</span>
-        {% endif %}
+    <a class="btn btn-lg btn-primary" href="{% url 'posts:post_detail' post.id %}">Просмотр</a>
+    {% if post.group %}
+            <a class="btn btn-lg btn-primary" href="{% url 'posts:group_list' post.group.slug %}">Просмотр группы {{ post.group.title }}</a>
     {% endif %}
-    <br>
+    <a class="btn btn-lg btn-primary" href="{% url 'posts:profile' post.author %}">Просмотр постов {{ post.author }}</a>
     {% if not forloop.last %}<hr>{% endif %}
 </article>
