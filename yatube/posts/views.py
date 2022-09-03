@@ -32,7 +32,7 @@ def profile(request, username):
     posts = author.posts.select_related('group').all()
     posts_count = posts.count()
     following = author.following.filter(
-        user=request.user).exists()
+        user=request.user.id).exists()
     context = {
         'author': author,
         'posts_count': posts_count,

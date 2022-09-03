@@ -26,11 +26,11 @@ class PostModelTest(TestCase):
     def test_models_have_correct_object_names(self):
         """Проверка object_names в посте."""
         post = PostModelTest.post
-        self.assertEqual(post.text[:15], str(post))
+        self.assertEqual(post.text[:30], str(post))
         group = PostModelTest.group
         self.assertEqual(group.title, str(group))
         field_str = (
-            (post.text[:15], str(post)),
+            (post.text[:30], str(post)),
             (group.title, str(group)),
         )
         for field, expected_value in field_str:
@@ -41,7 +41,7 @@ class PostModelTest(TestCase):
         """Проверка verbose_name в посте."""
         post = PostModelTest.post
         field_verboses = {
-            'text': 'Текст поста',
+            'text': 'Текст',
             'pub_date': 'Дата создания',
             'author': 'Автор',
             'group': 'Группа поста',
@@ -70,7 +70,7 @@ class PostModelTest(TestCase):
         """Проверка help_text в посте."""
         post = PostModelTest.post
         field_help_texts = {
-            'text': 'Введите текст поста',
+            'text': 'Введите текст',
             'group': 'Выберете группу для поста',
         }
         for field, expected_value in field_help_texts.items():
